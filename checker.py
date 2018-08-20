@@ -10,12 +10,12 @@ LOG_P=2048
 parser = argparse.ArgumentParser()
 parser.add_argument('path_to_tweetfile')
 parser.add_argument('path_to_valuefile')
+parser.add_argument('path_to_imagefile')
 args = parser.parse_args()
 
 number=0
 witness=0
 commitment=0
-S1=0
 
 #read value
 with open(args.path_to_valuefile) as valuefile:
@@ -23,16 +23,14 @@ with open(args.path_to_valuefile) as valuefile:
     for line in listvalue:
         split=line.split(' : ')
         if split[0] == "Random Number":
-            number=split[1]
+            number=split[1].lower()
         elif split[0] == "Witness":
-            witness=split[1]
+            witness=split[1].lower()
         elif split[0] == "Commitment":
-            commitment=split[1]
-        elif split[0] == "S1":
-            S1=split[1]
+            commitment=split[1].lower()
 
 
-if( number==0 or witness==0 or commitment==0 or S1==0 ):
+if( number==0 or witness==0 or commitment==0 ):
     print("Values not read correctly, check the file formating")
     exit()
 
@@ -43,8 +41,6 @@ if(witness[-1]=='\n'):
     witness=witness[:-1]
 if(commitment[-1]=='\n'):
     commitment=commitment[:-1]
-if(S1[-1]=='\n'):
-    S1=S1[:-1]
 
 
 #creation of seed which is SHA512( SHA512(tweetfile) || S1 )
@@ -53,13 +49,16 @@ if(S1[-1]=='\n'):
 with open(args.path_to_tweetfile,mode='rb') as tweetfile:
     S0=hashlib.sha512(tweetfile.read()).hexdigest()
 
+#SHA512(imagefile)
+with open(args.path_to_imagefile,mode='rb') as imagefile:
+    S1=hashlib.sha512(imagefile.read()).hexdigest()
+
 
 S=S0+S1
 seed_string= hashlib.sha512( bytearray(S,"ascii") ).hexdigest()
 
-
 #check seed, commitment
-if( hashlib.sha512( bytearray(seed_string,"ascii") ).hexdigest() != commitment ):
+if( hashlib.sha512( bytearray(seed_string,"ascii") ).hexdigest() != commitment):
     print(TEXT_NOT_VALID)
     exit()
 

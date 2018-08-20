@@ -4,9 +4,10 @@ Script to verify the data of a unicorn beacon output.
 
 The script:
   - implemented with python 3
-  - need 2 files:
-    -the tweet file
-    -the file with values
+  - need 3 files:
+    - the tweet file
+    - the file with values
+    - the image file
 
 a example of file is given
 
@@ -15,4 +16,4 @@ the tweets file can be download at the same place
 
 
 running:
-python3 checker.py tweetsfile valuefile
+python3 checker.py tweetsfile valuefile imagefile
