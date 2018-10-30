@@ -1,8 +1,10 @@
 import argparse
 import hashlib
 import random
+import subprocess
 
 TEXT_NOT_VALID="Verification FAILLURE, values does not correspond"
+TEXT_PART_VALID="Verification in progress sloth part OK, checking timed commitment, can be long"
 TEXT_VALID="Verification SUCCESS, all values are good"
 ITERATIONS=155000
 LOG_P=2048
@@ -16,6 +18,9 @@ args = parser.parse_args()
 number=0
 witness=0
 commitment=0
+AESpass=0
+AESprime=0
+AEStimedcommit=0
 
 #read value
 with open(args.path_to_valuefile) as valuefile:
@@ -28,9 +33,15 @@ with open(args.path_to_valuefile) as valuefile:
             witness=split[1].lower()
         elif split[0] == "Commitment":
             commitment=split[1].lower()
+        elif split[0] == "AES pass":
+            AESpass=split[1]
+        elif split[0] == "AES prime":
+            AESprime=split[1].lower()
+        elif split[0] == "AES timed Commitment":
+            AEStimedcommit=split[1].lower()
 
 
-if( number==0 or witness==0 or commitment==0 ):
+if( number==0 or witness==0 or commitment==0 or AESpass==0 or AESprime==0 or AEStimedcommit==0):
     print("Values not read correctly, check the file formating")
     exit()
 
@@ -41,16 +52,23 @@ if(witness[-1]=='\n'):
     witness=witness[:-1]
 if(commitment[-1]=='\n'):
     commitment=commitment[:-1]
+if(AESpass[-1]=='\n'):
+    AESpass=AESpass[:-1]
+if(AESprime[-1]=='\n'):
+    AESprime=AESprime[:-1]
+if(AEStimedcommit[-1]=='\n'):
+    AEStimedcommit=AEStimedcommit[:-1]
 
+subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_imagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+AESpass,shell=True,check=True)
 
-#creation of seed which is SHA512( SHA512(tweetfile) || S1 )
+#creation of seed which is SHA512( SHA512(tweetfile) || SHA512(imagefile) )
 
 #SHA512(tweetfile)
 with open(args.path_to_tweetfile,mode='rb') as tweetfile:
     S0=hashlib.sha512(tweetfile.read()).hexdigest()
 
 #SHA512(imagefile)
-with open(args.path_to_imagefile,mode='rb') as imagefile:
+with open(args.path_to_imagefile+".decrypt",mode='rb') as imagefile:
     S1=hashlib.sha512(imagefile.read()).hexdigest()
 
 
@@ -183,6 +201,23 @@ for i in range(ITERATIONS):
 
 
 if (thoinv_seed_test != witness_num):
+    print(TEXT_NOT_VALID)
+    exit()
+
+
+print(TEXT_PART_VALID)
+
+
+TIMEITERATIONS=255000000
+AESpass_num=int(AESpass,36)
+AESprime_num=int(AESprime,16)
+AEStimedcommit_num=int(AEStimedcommit,16)
+timedcommit_check=int(AESpass_num)
+
+for i in range(TIMEITERATIONS):
+    timedcommit_check=tho_inv(timedcommit_check,p)
+
+if (AEStimedcommit_num != timedcommit_check):
     print(TEXT_NOT_VALID)
     exit()
 
