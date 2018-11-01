@@ -145,9 +145,9 @@ def is_probable_prime(n, k = 25):
 def tho_inv(n,primemod):
     ret=0
     if( (n%2) == 0):
-        ret = (n*n) % primemod
+        ret = pow(n,2,primemod)
     else:
-        ret = primemod - ((n*n) % primemod)
+        ret = primemod - pow(n,2,primemod) #((n*n) % primemod)
 
     flip = (2** (primemod.bit_length()>>1) ) -1
 
@@ -212,20 +212,18 @@ TIMEITERATIONS=255000000
 AESpass_num=int(AESpass,36)
 AESprime_num=int(AESprime,16)
 AEStimedcommit_num=int(AEStimedcommit,16)
-timedcommit_check=int(AESpass_num)
 
-for i in range(TIMEITERATIONS):
-    timedcommit_check=tho_inv(timedcommit_check,p)
+if (not is_probable_prime(AESprime_num)):
+    print(TEXT_NOT_VALID)
+    exit()
 
-if (AEStimedcommit_num != timedcommit_check):
+for j in range(TIMEITERATIONS):
+    AESpass_num=tho_inv(AESpass_num,AESprime_num)
+
+if (AEStimedcommit_num != AESpass_num):
     print(TEXT_NOT_VALID)
     exit()
 
 
 print(TEXT_VALID)
 exit()
-
-
-
-
-
