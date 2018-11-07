@@ -2,12 +2,14 @@ import argparse
 import hashlib
 import random
 import subprocess
+import numpy as np
 
 TEXT_NOT_VALID="Verification FAILLURE, values does not correspond"
-TEXT_PART_VALID="Verification in progress sloth part OK, checking timed commitment, can be long"
 TEXT_VALID="Verification SUCCESS, all values are good"
 ITERATIONS=155000
 LOG_P=2048
+TIMEDITERATIONS=300000000000
+KLENGTH=256
 
 parser = argparse.ArgumentParser()
 parser.add_argument('path_to_tweetfile')
@@ -18,9 +20,9 @@ args = parser.parse_args()
 number=0
 witness=0
 commitment=0
-AESpass=0
-AESprime=0
-AEStimedcommit=0
+COMMIT_N=0
+COMMIT_P=0
+COMMIT_Q=0
 
 #read value
 with open(args.path_to_valuefile) as valuefile:
@@ -31,17 +33,17 @@ with open(args.path_to_valuefile) as valuefile:
             number=split[1].lower()
         elif split[0] == "Witness":
             witness=split[1].lower()
-        elif split[0] == "Commitment":
+        elif split[0] == "Timed Commitment":
             commitment=split[1].lower()
-        elif split[0] == "AES pass":
-            AESpass=split[1]
-        elif split[0] == "AES prime":
-            AESprime=split[1].lower()
-        elif split[0] == "AES timed Commitment":
-            AEStimedcommit=split[1].lower()
+        elif split[0] == "COMMIT_N":
+            COMMIT_N=split[1].lower()
+        elif split[0] == "COMMIT_P":
+            COMMIT_P=split[1].lower()
+        elif split[0] == "COMMIT_Q":
+            COMMIT_Q=split[1].lower()
 
 
-if( number==0 or witness==0 or commitment==0 or AESpass==0 or AESprime==0 or AEStimedcommit==0):
+if( number==0 or witness==0 or commitment==0 or COMMIT_N==0 or COMMIT_P==0 or COMMIT_Q==0):
     print("Values not read correctly, check the file formating")
     exit()
 
@@ -52,14 +54,32 @@ if(witness[-1]=='\n'):
     witness=witness[:-1]
 if(commitment[-1]=='\n'):
     commitment=commitment[:-1]
-if(AESpass[-1]=='\n'):
-    AESpass=AESpass[:-1]
-if(AESprime[-1]=='\n'):
-    AESprime=AESprime[:-1]
-if(AEStimedcommit[-1]=='\n'):
-    AEStimedcommit=AEStimedcommit[:-1]
+if(COMMIT_N[-1]=='\n'):
+    COMMIT_N=COMMIT_N[:-1]
+if(COMMIT_P[-1]=='\n'):
+    COMMIT_P=COMMIT_P[:-1]
+if(COMMIT_Q[-1]=='\n'):
+    COMMIT_Q=COMMIT_Q[:-1]
 
-subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_imagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+AESpass,shell=True,check=True)
+comp=int(COMMIT_P,16)
+comq=int(COMMIT_Q,16)
+comn=int(COMMIT_N,16)
+
+#check commit
+if( (comp*comq) != comn ):
+    print(TEXT_NOT_VALID)
+    exit()
+
+
+#using commit to get image
+
+kcomm=pow(int(commitment,16), pow(3,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
+kpass_num = kcomm % (2**KLENGTH)
+kpass=np.base_repr(kpass_num,36).lower()
+
+subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_imagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+kpass,shell=True,check=True)
+
+
 
 #creation of seed which is SHA512( SHA512(tweetfile) || SHA512(imagefile) )
 
@@ -76,9 +96,9 @@ S=S0+S1
 seed_string= hashlib.sha512( bytearray(S,"ascii") ).hexdigest()
 
 #check seed, commitment
-if( hashlib.sha512( bytearray(seed_string,"ascii") ).hexdigest() != commitment):
-    print(TEXT_NOT_VALID)
-    exit()
+#if( hashlib.sha512( bytearray(seed_string,"ascii") ).hexdigest() != commitment):
+#    print(TEXT_NOT_VALID)
+#    exit()
 
 
 #check number, witness
@@ -205,25 +225,4 @@ if (thoinv_seed_test != witness_num):
     exit()
 
 
-print(TEXT_PART_VALID)
-
-
-TIMEITERATIONS=255000000
-AESpass_num=int(AESpass,36)
-AESprime_num=int(AESprime,16)
-AEStimedcommit_num=int(AEStimedcommit,16)
-
-if (not is_probable_prime(AESprime_num)):
-    print(TEXT_NOT_VALID)
-    exit()
-
-for j in range(TIMEITERATIONS):
-    AESpass_num=tho_inv(AESpass_num,AESprime_num)
-
-if (AEStimedcommit_num != AESpass_num):
-    print(TEXT_NOT_VALID)
-    exit()
-
-
 print(TEXT_VALID)
-exit()
