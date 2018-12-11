@@ -73,7 +73,7 @@ if( (comp*comq) != comn ):
 
 #using commit to get image
 
-kcomm=pow(int(commitment,16), pow(3,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
+kcomm=pow(int(commitment,16), pow(2,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
 kpass_num = kcomm % (2**KLENGTH)
 kpass=np.base_repr(kpass_num,36).lower()
 
