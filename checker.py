@@ -71,13 +71,13 @@ if( (comp*comq) != comn ):
     exit()
 
 
-#using commit to get image
+#using commit to get image not needed anymore
 
-kcomm=pow(int(commitment,16), pow(2,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
-kpass_num = kcomm % (2**KLENGTH)
-kpass=np.base_repr(kpass_num,36).lower()
+#kcomm=pow(int(commitment,16), pow(2,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
+#kpass_num = kcomm % (2**KLENGTH)
+#kpass=np.base_repr(kpass_num,36).lower()
 
-subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_imagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+kpass,shell=True,check=True)
+#subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_imagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+kpass,shell=True,check=True)
 
 
 
@@ -88,7 +88,7 @@ with open(args.path_to_tweetfile,mode='rb') as tweetfile:
     S0=hashlib.sha512(tweetfile.read()).hexdigest()
 
 #SHA512(imagefile)
-with open(args.path_to_imagefile+".decrypt",mode='rb') as imagefile:
+with open(args.path_to_imagefile,mode='rb') as imagefile:
     S1=hashlib.sha512(imagefile.read()).hexdigest()
 
 
