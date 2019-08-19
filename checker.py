@@ -5,7 +5,7 @@ import subprocess
 import numpy as np
 import filecmp
 
-TEXT_NOT_VALID="Verification FAILLURE, values does not correspond"
+TEXT_NOT_VALID="Verification FAILURE, values does not correspond"
 TEXT_VALID="Verification SUCCESS, all values are good"
 ITERATIONS=155000
 LOG_P=2048
@@ -59,7 +59,7 @@ if(COMMIT_N[-1]=='\n'):
 ################################## function def #######################
 
 # Miller-Rabin primality test copy from check for eliptic  curve
-def is_probable_prime(n, k = 25):
+def is_probable_prime(n, k = 3):
     
     assert n >= 2, "Error in is_probable_prime: input (%d) is < 2" % n
     
@@ -84,25 +84,29 @@ def is_probable_prime(n, k = 25):
             return False
 
     # Perform the real Miller-Rabin test
-    s = 0
-    d = n - 1
-    while True:
-        quotient, remainder = divmod(d, 2)
-        if remainder == 1:
-            break
-        s += 1
-        d = quotient
+    s = 1
+    mask=2
+    while ((n&mask) ==0):
+        mask =mask <<1
+        s=s+1
+    d = (n >> s)
 
     # test the base a to see if it is a witness for the compositeness of n
     def try_composite(a):
-        if pow(a, d, n) == 1:
+        pod=pow(a, d, n)
+        if ( (pod == 1) or (pod == n-1) ):
             return False
-        for i in range(s):
-            if pow(a, 2**i * d, n) == n-1:
+        i=1
+        while(i < s):
+            pod=(pod*pod) % n
+            if (pod == n-1):
                 return False
+            i=i+1
         return True # n is definitely composite
 
-    for i in range(k):
+    if try_composite(2):
+        return False
+    for i in range(k-1):
         a = random.randrange(2, n)
         if try_composite(a):
             return False
@@ -111,15 +115,13 @@ def is_probable_prime(n, k = 25):
 
 
 
-def tho_inv(n,primemod):
+def tho_inv(n,primemod,flip):
     ret=0
-    if( (n%2) == 0):
+    if( (n&1) == 0):
         ret = pow(n,2,primemod)
     else:
         ret = primemod - pow(n,2,primemod) #((n*n) % primemod)
-    
-    flip = (2** (primemod.bit_length()>>1) ) -1
-    
+
     ret = (ret ^ flip)
     
     if( (ret >= primemod) or (ret == 0) ):
@@ -128,7 +130,7 @@ def tho_inv(n,primemod):
     return ret
 
 
-def generate(s,i,w):
+def generate(s,i,w,a):
     hexa=""
     locali=i
     localw=w
@@ -146,11 +148,14 @@ def generate(s,i,w):
     
     intprime=int(hexa,16)
 
-    if(intprime%2 == 0):
+    if(intprime&1 == 0):
         intprime=intprime+1
+    if(a==4):
+        if(intprime&2 == 0):
+            intprime=intprime+2
 
     while ( not(is_probable_prime(intprime)) ):
-        intprime=intprime+2
+        intprime=intprime+a
 
     return intprime
 
@@ -167,8 +172,8 @@ with open(args.path_to_imagefile,mode='rb') as imagefile:
     S1=hashlib.sha512(imagefile.read()).hexdigest()
 
 #check n
-comp=generate(S1,1,2)
-comq=generate(S1,3,2)
+comp=generate(S1,1,2,2)
+comq=generate(S1,3,2,2)
 comn=int(COMMIT_N,16)
 
 #check commit
@@ -195,7 +200,7 @@ kcomm=pow(int(commitment,16), pow(2,TIMEDITERATIONS,(comp-1)*(comq-1)) ,comn)
 kpass_num = kcomm % (2**KLENGTH)
 kpass=np.base_repr(kpass_num,36).lower()
 
-subprocess.run("openssl aes-256-cbc -d -in "+args.path_to_encryptimagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+kpass,shell=True,check=True)
+subprocess.check_call("openssl aes-256-cbc -d -in "+args.path_to_encryptimagefile+" -out "+args.path_to_imagefile+".decrypt -pass pass:"+kpass,shell=True)
 if (not(filecmp.cmp(args.path_to_imagefile, args.path_to_imagefile+".decrypt", shallow=False))):
     print(TEXT_NOT_VALID)
     exit()
@@ -214,10 +219,8 @@ if( hashlib.sha512( bytearray(witness,"ascii") ).hexdigest() != number ):
 nb_block=LOG_P//512
 hexa=""
 
-p=generate(seed_string,1,nb_block)
+p=generate(seed_string,1,nb_block,4)
 
-while ( (p%4 !=3) or not(is_probable_prime(p)) ):
-    p=p+2
 
 
 
@@ -229,9 +232,10 @@ for i in range(5 ,5 + nb_block):
 thoinv_seed_test = (int(hexa,16) % p)
 witness_num = int(witness,16)
 
+flip = (2** (p.bit_length()>>1) ) -1
 
 for i in range(ITERATIONS):
-    witness_num=tho_inv(witness_num,p)
+    witness_num=tho_inv(witness_num,p,flip)
 
 
 if (thoinv_seed_test != witness_num):
