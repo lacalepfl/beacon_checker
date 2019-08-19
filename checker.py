@@ -58,13 +58,13 @@ if(COMMIT_N[-1]=='\n'):
 
 ################################## function def #######################
 
-# Miller-Rabin primality test copy from check for eliptic  curve
+# Miller-Rabin primality test for odd number only
 def is_probable_prime(n, k = 3):
     
     assert n >= 2, "Error in is_probable_prime: input (%d) is < 2" % n
     
     # First check if n is divisible by any of the prime numbers < 1000
-    low_primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+    low_primes = [3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
                   59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113,
                   127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
                   191, 193, 197, 199, 211, 223, 227, 229, 233, 239, 241, 251,
@@ -85,10 +85,10 @@ def is_probable_prime(n, k = 3):
 
     # Perform the real Miller-Rabin test
     s = 1
-    mask=2
-    while ((n&mask) ==0):
-        mask =mask <<1
-        s=s+1
+    mask = 2
+    while ((n&mask) == 0):
+        mask = mask << 1
+        s = s + 1
     d = (n >> s)
 
     # test the base a to see if it is a witness for the compositeness of n
@@ -96,12 +96,12 @@ def is_probable_prime(n, k = 3):
         pod=pow(a, d, n)
         if ( (pod == 1) or (pod == n-1) ):
             return False
-        i=1
+        i = 1
         while(i < s):
-            pod=(pod*pod) % n
+            pod = (pod*pod) % n
             if (pod == n-1):
                 return False
-            i=i+1
+            i = i + 1
         return True # n is definitely composite
 
     if try_composite(2):
@@ -116,11 +116,11 @@ def is_probable_prime(n, k = 3):
 
 
 def tho_inv(n,primemod,flip):
-    ret=0
+    ret = 0
     if( (n&1) == 0):
-        ret = pow(n,2,primemod)
+        ret = ((n*n) % primemod)
     else:
-        ret = primemod - pow(n,2,primemod) #((n*n) % primemod)
+        ret = primemod - ((n*n) % primemod)
 
     ret = (ret ^ flip)
     
@@ -150,12 +150,12 @@ def generate(s,i,w,a):
 
     if(intprime&1 == 0):
         intprime=intprime+1
-    if(a==4):
+    if(a == 4):
         if(intprime&2 == 0):
-            intprime=intprime+2
+            intprime = intprime + 2
 
     while ( not(is_probable_prime(intprime)) ):
-        intprime=intprime+a
+        intprime = intprime + a
 
     return intprime
 
